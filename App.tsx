@@ -9,21 +9,21 @@
  */
 
 import React, {useEffect, useState} from 'react';
-import {SafeAreaView, StatusBar, Text, useColorScheme} from 'react-native';
+import {
+  FlatList,
+  SafeAreaView,
+  StatusBar,
+  Text,
+  useColorScheme,
+} from 'react-native';
 
 import {Colors} from 'react-native/Libraries/NewAppScreen';
 import RNShake from 'react-native-shake';
-import {PlanetType, PLANET_LIST} from './src/data';
 
-import {
-  ApolloProvider,
-  gql,
-  useQuery,
-  ApolloClient,
-  InMemoryCache,
-} from '@apollo/client';
+import {ApolloProvider, gql, ApolloClient, InMemoryCache} from '@apollo/client';
 
-export const baseURL = 'https://graphql.org/swapi-graphql';
+export const baseURL =
+  'https://swapi-graphql.netlify.app/.netlify/functions/index';
 // Initialize Apollo Client
 const cache = new InMemoryCache();
 
@@ -32,65 +32,37 @@ const client = new ApolloClient({
   cache,
   defaultOptions: {watchQuery: {fetchPolicy: 'cache-and-network'}},
 });
-const CHAPTERS_QUERY = gql`
-  query Chapters {
-    chapters {
-      id
-      number
-      title
-    }
-  }
-`;
+
 const MyRootComponent = () => {
-  const [planet, setPlanet] = useState<PlanetType>();
+  const [planet, setPlanet] = useState<any>();
   const isDarkMode = useColorScheme() === 'dark';
 
   const backgroundStyle = {
     backgroundColor: isDarkMode ? Colors.darker : Colors.lighter,
   };
-  const query = gql`
-    query {
-      planet(planetID: 1) {
-        name
-        filmConnection {
-          films {
-            title
+
+  useEffect(() => {
+    const query = gql`
+      query {
+        planet(planetID: 1) {
+          name
+          filmConnection {
+            films {
+              title
+            }
           }
         }
       }
-    }
-  `;
-  const {data, loading} = useQuery(query);
-  useEffect(() => {
-    console.log('data', loading, data);
-
+    `;
     client
       .query({query})
       .then(response => {
-        console.log(response.data);
+        console.log(response.data.planet);
+        setPlanet(response.data.planet);
       })
       .catch(err => console.log(err));
     const subscription = RNShake.addListener(() => {
       console.log('shaaaaake');
-      var RandomNumber: number = Math.floor(Math.random() * 10) + 1;
-      setPlanet(PLANET_LIST[RandomNumber]);
-      client
-        .query({
-          query: gql`
-            query {
-              planet(planetID: 1) {
-                name
-                filmConnection {
-                  films {
-                    title
-                  }
-                }
-              }
-            }
-          `,
-        })
-        .then(result => console.log(result))
-        .catch(err => console.log(err));
     });
 
     return () => {
@@ -101,8 +73,11 @@ const MyRootComponent = () => {
   return (
     <SafeAreaView style={backgroundStyle}>
       <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
-      <Text>{planet?.name}</Text>
-      <Text>{JSON.stringify(data) + JSON.stringify(loading)}</Text>
+      <Text style={{fontSize: 34}}>{planet?.name}</Text>
+      <FlatList
+        data={planet?.filmConnection?.films}
+        renderItem={({title}) => <Text>{title}</Text>}
+      />
     </SafeAreaView>
   );
 };
